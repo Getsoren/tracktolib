@@ -1,3 +1,13 @@
+## 0.75.0 (2026-07-13)
+
+### Feat
+
+- **pg**: add SQLExpr for inlining raw SQL in insert/update values (#51)
+
+### Fix
+
+- **s3**: default to s3v4 signature when no config is provided (#50)
+
 ## 0.74.0 (2026-02-26)
 
 ### Feat

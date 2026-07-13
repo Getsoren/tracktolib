@@ -1,6 +1,6 @@
 [project]
 name = "tracktolib"
-version = "0.74.0"
+version = "0.75.0"
 authors = [
     { email = "julien.brayere@tracktor.fr" }
 ]
@@ -114,7 +114,7 @@ pythonPlatform = "Linux"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.74.0"
+version = "0.75.0"
 tag_format = "$version"
 version_files = [
     "pyproject.toml:version"
