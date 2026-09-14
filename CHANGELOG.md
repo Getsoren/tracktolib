@@ -1,3 +1,10 @@
+## 0.76.1 (2026-09-14)
+
+### Fix
+
+- parse CSV boolean values explicitly (#57)
+- reject inconsistent expressions in batch queries (#56)
+
 ## 0.76.0 (2026-09-14)
 
 ### Feat
