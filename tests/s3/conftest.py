@@ -7,10 +7,10 @@ import pytest
 from botocore.config import Config
 from minio import Minio
 
-# MinIO config
-MINIO_URL = os.environ.get("MINIO_URL", "localhost:9000")
-MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "foo")
-MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "foobarbaz")
+# Moto config (accepts any credentials)
+MOTO_URL = os.environ.get("MOTO_URL", "localhost:9000")
+MOTO_ACCESS_KEY = os.environ.get("MOTO_ACCESS_KEY", "foo")
+MOTO_SECRET_KEY = os.environ.get("MOTO_SECRET_KEY", "foobarbaz")
 
 # Garage config
 GARAGE_URL = os.environ.get("GARAGE_URL", "localhost:9002")
@@ -37,11 +37,11 @@ class S3BackendConfig:
     region: str
 
 
-MINIO_BACKEND = S3BackendConfig(
-    name="minio",
-    endpoint_url=f"http://{MINIO_URL}",
-    access_key=MINIO_ACCESS_KEY,
-    secret_key=MINIO_SECRET_KEY,
+MOTO_BACKEND = S3BackendConfig(
+    name="moto",
+    endpoint_url=f"http://{MOTO_URL}",
+    access_key=MOTO_ACCESS_KEY,
+    secret_key=MOTO_SECRET_KEY,
     region="us-east-1",
 )
 
@@ -56,7 +56,7 @@ GARAGE_BACKEND = S3BackendConfig(
 
 def get_s3_backends():
     """Return list of available S3 backends as pytest params."""
-    backends = [pytest.param(MINIO_BACKEND, id="minio")]
+    backends = [pytest.param(MOTO_BACKEND, id="moto")]
     if GARAGE_AVAILABLE:
         backends.append(pytest.param(GARAGE_BACKEND, id="garage"))
     return backends
@@ -85,7 +85,7 @@ def get_botocore_client(backend: S3BackendConfig):
 
 @pytest.fixture()
 def minio_client():
-    client = Minio(MINIO_URL, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=False)
+    client = Minio(MOTO_URL, access_key=MOTO_ACCESS_KEY, secret_key=MOTO_SECRET_KEY, secure=False)
     yield client
 
 

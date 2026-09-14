@@ -4,7 +4,7 @@ import minio.error
 import pytest
 from aiobotocore.session import get_session
 
-from tests.s3.conftest import MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_URL
+from tests.s3.conftest import MOTO_ACCESS_KEY, MOTO_SECRET_KEY, MOTO_URL
 
 
 @contextlib.asynccontextmanager
@@ -12,9 +12,9 @@ async def get_s3_client():
     session = get_session()
     async with session.create_client(
         "s3",
-        endpoint_url=f"http://{MINIO_URL}",
-        aws_secret_access_key=MINIO_SECRET_KEY,
-        aws_access_key_id=MINIO_ACCESS_KEY,
+        endpoint_url=f"http://{MOTO_URL}",
+        aws_secret_access_key=MOTO_SECRET_KEY,
+        aws_access_key_id=MOTO_ACCESS_KEY,
     ) as client:
         yield client
 

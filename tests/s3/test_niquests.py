@@ -370,8 +370,8 @@ class TestS3BucketManagement:
         ],
     )
     async def test_bucket_policy_crud(self, s3_bucket, s3_backend, policy_input, policy_type):
-        """Test put, get, and delete bucket policy operations (MinIO only)."""
-        if s3_backend.name != "minio":
+        """Test put, get, and delete bucket policy operations (moto only)."""
+        if s3_backend.name != "moto":
             pytest.skip(f"Bucket policy not supported on {s3_backend.name}")
 
         from tracktolib.s3.niquests import s3_delete_bucket_policy, s3_get_bucket_policy, s3_put_bucket_policy
@@ -380,7 +380,7 @@ class TestS3BucketManagement:
             async with niquests.AsyncSession() as client:
                 # Put policy
                 resp = await s3_put_bucket_policy(s3, client, s3_bucket, policy_input)
-                assert resp.status_code == 204
+                assert resp.status_code in (200, 204)  # AWS/MinIO 204, moto 200
 
                 # Get policy
                 result = await s3_get_bucket_policy(s3, client, s3_bucket)
@@ -390,11 +390,11 @@ class TestS3BucketManagement:
 
                 # Delete policy
                 resp = await s3_delete_bucket_policy(s3, client, s3_bucket)
-                assert resp.status_code == 204
+                assert resp.status_code in (200, 204)
 
     async def test_get_bucket_policy_nonexistent(self, s3_bucket, s3_backend):
-        """Test getting a bucket policy that doesn't exist (MinIO only)."""
-        if s3_backend.name != "minio":
+        """Test getting a bucket policy that doesn't exist (moto only)."""
+        if s3_backend.name != "moto":
             pytest.skip(f"Bucket policy not supported on {s3_backend.name}")
 
         from tracktolib.s3.niquests import s3_get_bucket_policy
@@ -403,7 +403,7 @@ class TestS3BucketManagement:
             async with niquests.AsyncSession() as client:
                 # Get non-existent policy (should return None or raise depending on provider)
                 result = await s3_get_bucket_policy(s3, client, s3_bucket)
-                # MinIO returns empty on no policy, behavior may vary
+                # Providers differ on missing policies (empty body vs error)
                 assert result is None or isinstance(result, dict)
 
     @pytest.mark.parametrize(
@@ -442,8 +442,8 @@ class TestS3BucketManagement:
 @pytest.mark.usefixtures("setup_bucket")
 class TestS3SessionBucketManagement:
     async def test_session_bucket_policy(self, s3_bucket, s3_client, s3_backend):
-        """Test S3Session bucket policy methods (MinIO only)."""
-        if s3_backend.name != "minio":
+        """Test S3Session bucket policy methods (moto only)."""
+        if s3_backend.name != "moto":
             pytest.skip(f"Bucket policy not supported on {s3_backend.name}")
 
         policy = {
@@ -460,7 +460,7 @@ class TestS3SessionBucketManagement:
 
         # Put policy
         resp = await s3_client.put_bucket_policy(s3_bucket, policy)
-        assert resp.status_code == 204
+        assert resp.status_code in (200, 204)  # AWS/MinIO 204, moto 200
 
         # Get policy
         result = await s3_client.get_bucket_policy(s3_bucket)
@@ -469,7 +469,7 @@ class TestS3SessionBucketManagement:
 
         # Delete policy
         resp = await s3_client.delete_bucket_policy(s3_bucket)
-        assert resp.status_code == 204
+        assert resp.status_code in (200, 204)
 
     async def test_session_empty_bucket(self, s3_bucket, s3_client):
         """Test S3Session empty_bucket method."""
