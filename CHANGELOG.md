@@ -1,3 +1,9 @@
+## 0.76.2 (2026-09-14)
+
+### Fix
+
+- preserve column order in synchronous batch inserts (#55)
+
 ## 0.76.1 (2026-09-14)
 
 ### Fix
