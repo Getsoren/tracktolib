@@ -1,3 +1,13 @@
+## 1.0.0 (2026-09-14)
+
+### BREAKING CHANGE
+
+- the `notion` and `http` extras no longer exist.
+
+### Feat
+
+- drop notion and http helpers (#71)
+
 ## 0.76.6 (2026-09-14)
 
 ### Fix
