@@ -1,3 +1,9 @@
+## 0.76.4 (2026-09-14)
+
+### Fix
+
+- **utils**: remove keys under optimized Python (#60)
+
 ## 0.76.3 (2026-09-14)
 
 ### Fix
