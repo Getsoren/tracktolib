@@ -1896,7 +1896,7 @@ wheels = [
 
 [[package]]
 name = "tracktolib"
-version = "0.76.4"
+version = "0.76.5"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -1911,14 +1911,8 @@ gh = [
     { name = "niquests" },
     { name = "typing-extensions" },
 ]
-http = [
-    { name = "httpx" },
-]
 logs = [
     { name = "python-json-logger" },
-]
-notion = [
-    { name = "niquests" },
 ]
 pg = [
     { name = "asyncpg" },
@@ -1980,11 +1974,9 @@ requires-dist = [
     { name = "botocore", marker = "extra == 's3-niquests'", specifier = ">=1.35.36" },
     { name = "deepdiff", marker = "extra == 'tests'", specifier = ">=8.1.0" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.103.2" },
-    { name = "httpx", marker = "extra == 'http'", specifier = ">=0.25.0" },
     { name = "minio", marker = "extra == 's3-minio'", specifier = ">=7.2.0" },
     { name = "niquests", marker = "extra == 'cf'", specifier = ">=3.17.0" },
     { name = "niquests", marker = "extra == 'gh'", specifier = ">=3.17.0" },
-    { name = "niquests", marker = "extra == 'notion'", specifier = ">=3.17.0" },
     { name = "niquests", marker = "extra == 's3-niquests'", specifier = ">=3.17.0" },
     { name = "psycopg", marker = "extra == 'pg-sync'", specifier = ">=3.1.12" },
     { name = "pycryptodome", marker = "extra == 's3-minio'", specifier = ">=3.20.0" },
@@ -1993,7 +1985,7 @@ requires-dist = [
     { name = "rich", marker = "extra == 'pg'", specifier = ">=13.6.0" },
     { name = "typing-extensions", marker = "extra == 'gh'", specifier = ">=4.12.0" },
 ]
-provides-extras = ["logs", "pg-sync", "s3-minio", "s3", "s3-niquests", "tests", "http", "api", "pg", "notion", "gh", "cf"]
+provides-extras = ["logs", "pg-sync", "s3-minio", "s3", "s3-niquests", "tests", "api", "pg", "gh", "cf"]
 
 [package.metadata.requires-dev]
 bump = [{ name = "commitizen", specifier = ">=4.10.0" }]

@@ -37,7 +37,6 @@ s3-niquests = [
     "niquests>=3.17.0",
 ]
 tests = ["deepdiff>=8.1.0"]
-http = ["httpx>=0.25.0"]
 api = [
     "fastapi>=0.103.2",
     "pydantic>=2",
@@ -46,7 +45,6 @@ pg = [
     "asyncpg>=0.27.0",
     "rich>=13.6.0",
 ]
-notion = ["niquests>=3.17.0"]
 gh = ["niquests>=3.17.0", "typing_extensions>=4.12.0"]
 cf = ["niquests>=3.17.0"]
 
