@@ -1,3 +1,9 @@
+## 0.76.0 (2026-09-14)
+
+### Feat
+
+- **gh**: add pull request review methods to GitHubClient (#53)
+
 ## 0.75.2 (2026-09-14)
 
 ### Fix
