@@ -1,3 +1,11 @@
+## 1.0.2 (2026-09-14)
+
+### Fix
+
+- **api**: avoid binding JSON serializer callbacks (#67)
+- bind query fetch parameters in SQL order (#65)
+- upload empty unknown-length S3 streams (#64)
+
 ## 1.0.1 (2026-09-14)
 
 ### Fix
