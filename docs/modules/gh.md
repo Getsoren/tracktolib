@@ -20,8 +20,10 @@ uv add tracktolib[gh]
 
 This module provides an async client for the [GitHub REST API](https://docs.github.com/en/rest):
 
-- Issue and PR comment management (create, delete, idempotent operations)
+- Issue and PR comment management (create, delete, idempotent operations, reactions)
 - Label management (add, remove, list)
+- Pull requests (get, list, diff, reviews)
+- Collaborator permissions
 - Deployment status management (list, mark inactive)
 
 ## Authentication
@@ -39,6 +41,17 @@ Or pass a token explicitly:
 
 ```python
 async with GitHubClient(token="ghp_xxx") as gh:
+    # ... use client
+```
+
+Short lived tokens (a GitHub App installation token expires after an hour) are best handled by creating a client per
+event, or by refreshing the header with a `pre_request` hook:
+
+```python
+def refresh_token(request, **kwargs):
+    request.headers["Authorization"] = f"Bearer {get_installation_token()}"
+
+async with GitHubClient(token="placeholder", hooks={"pre_request": [refresh_token]}) as gh:
     # ... use client
 ```
 
@@ -104,6 +117,74 @@ if comment:
     print("Posted new status comment")
 else:
     print("Status comment already exists")
+```
+
+### `create_reaction(repository, comment_id, content) -> Reaction`
+
+Create a reaction on an issue or PR comment. Content is one of `+1`, `-1`, `laugh`, `confused`, `heart`, `hooray`,
+`rocket`, `eyes`.
+
+```python
+# Acknowledge a bot command
+await gh.create_reaction("owner/repo", 12345678, "eyes")
+```
+
+## Pull Requests
+
+### `list_pull_requests(repository, *, state, head, base) -> list[PullRequestSimple]`
+
+List pull requests, optionally filtered by state (`open`, `closed`, `all`), head or base branch.
+
+```python
+prs = await gh.list_pull_requests("owner/repo", state="open", base="master")
+```
+
+### `get_pull_request(repository, number) -> PullRequest`
+
+Get a single pull request. Unlike `list_pull_requests`, it returns the full payload (`changed_files`, `additions`,
+`mergeable`, ...).
+
+```python
+pr = await gh.get_pull_request("owner/repo", 42)
+print(pr["title"], pr["head"]["sha"], pr["changed_files"])
+```
+
+### `get_pull_request_diff(repository, number) -> str`
+
+Get the unified diff of a pull request (sent with the `application/vnd.github.v3.diff` media type).
+
+```python
+diff = await gh.get_pull_request_diff("owner/repo", 42)
+```
+
+### `create_pull_request_review(repository, number, *, body, event, comments, commit_id) -> PullRequestReview`
+
+Create a review, optionally with line anchored comments. Event is one of `APPROVE`, `REQUEST_CHANGES` or `COMMENT`
+(the default).
+
+```python
+await gh.create_pull_request_review(
+    "owner/repo",
+    42,
+    body="Found a few things",
+    event="REQUEST_CHANGES",
+    comments=[
+        {"path": "app/main.py", "line": 12, "side": "RIGHT", "body": "This can be None here"},
+        {"path": "app/main.py", "start_line": 20, "line": 24, "side": "RIGHT", "body": "Extract this block"},
+    ],
+)
+```
+
+## Collaborators
+
+### `get_collaborator_permission(repository, username) -> str`
+
+Get the permission of a user on a repository: `admin`, `write`, `read` or `none`. Raises `GitHubError` if GitHub does
+not return a permission, so a bot gating on it never falls back to a permissive default.
+
+```python
+if await gh.get_collaborator_permission("owner/repo", "octocat") not in ("admin", "write"):
+    raise PermissionError("Not allowed to trigger the bot")
 ```
 
 ## Labels
@@ -234,15 +315,18 @@ async with GitHubClient(hooks={"response": [log_response]}) as gh:
 
 ## Error Handling
 
-The client uses `raise_for_status()` on all API responses, raising `niquests.HTTPError` on failures:
+Error responses raise `GitHubError`, which carries the status code and the message GitHub returned in the body. It
+subclasses `niquests.HTTPError`, so code catching that keeps working:
 
 ```python
-from niquests import HTTPError
+from tracktolib.gh import GitHubError
 
 try:
     await gh.create_issue_comment("owner/repo", 999999, "test")
-except HTTPError as e:
-    print(f"GitHub API error: {e.response.status_code} - {e.response.text}")
+except GitHubError as e:
+    print(f"GitHub API error: {e.status} - {e.message}")
+    if e.status == 404:
+        ...
 ```
 
 ## Types
@@ -251,10 +335,15 @@ The module exports TypedDict types generated from GitHub's OpenAPI spec:
 
 - `IssueComment` - Issue/PR comment data
 - `Label` - Label data
+- `PullRequest` / `PullRequestSimple` - Pull request data
+- `PullRequestReview` - Review data
+- `Reaction` - Reaction data
 - `Deployment` - Deployment data
 - `DeploymentStatus` - Deployment status data
 - `ProgressCallback` - Type alias for progress callbacks `Callable[[int, int], None]`
+- `ReviewComment` - Line anchored review comment (`path`, `body`, `line`, `start_line`, `side`, `start_side`)
+- `ReviewEvent` / `ReactionContent` - Literal aliases for review events and reaction contents
 
 ```python
-from tracktolib.gh import IssueComment, Label, Deployment, DeploymentStatus, ProgressCallback
+from tracktolib.gh import IssueComment, Label, PullRequest, ReviewComment, ProgressCallback
 ```
