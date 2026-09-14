@@ -349,8 +349,11 @@ class PGUpdateQuery(PGQuery):
             SET {self._update_fields}
         {self._get_where_query()}
         """
-        if self.returning or self.return_keys:
-            returning = self.returning or [k for k in self.keys if k not in self.where_keys]
+        if self.returning:
+            query = _get_returning_query(query.strip(), self.returning)
+        elif self.return_keys:
+            # where_keys is None with a raw where clause: return every column
+            returning = self.keys if not self.where_keys else [k for k in self.keys if k not in self.where_keys]
             query = _get_returning_query(query.strip(), returning)
         return query
 
