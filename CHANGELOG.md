@@ -1,3 +1,9 @@
+## 0.76.5 (2026-09-14)
+
+### Fix
+
+- raise embedded S3 multipart completion errors (#59)
+
 ## 0.76.4 (2026-09-14)
 
 ### Fix
