@@ -782,6 +782,11 @@ async def s3_file_upload(
                 return
             await mpart.upload_part(chunk)
             has_uploaded_parts = True
+        # Abort unused multipart uploads and PUT a zero-byte object when an unknown-length stream
+        # produces no data. Preserve object options through the fallback.
+        if not has_uploaded_parts:
+            await mpart.fetch_abort()
+            await s3_put_object(s3, client, bucket=bucket, key=key, data=b"", on_upload=on_upload, **kwargs)
 
 
 def _get_credentials(s3: botocore.client.BaseClient, session: botocore.session.Session | None = None):
