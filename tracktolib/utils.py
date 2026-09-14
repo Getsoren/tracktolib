@@ -297,7 +297,7 @@ def rm_keys(data: dict | list[dict], keys: list[str]):
     _data = data if isinstance(data, list) else [data]
     for d in _data:
         for key in keys:
-            assert d.pop(key, None) is not None
+            del d[key]
     return _data if isinstance(data, list) else _data[0]
 
 
