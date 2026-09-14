@@ -4,7 +4,7 @@ import datetime as dt
 import hashlib
 import http
 import xml.etree.ElementTree as ET
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Literal, NamedTuple, Required, Self, TypedDict, Unpack
@@ -18,6 +18,7 @@ try:
     from botocore.auth import SigV4Auth
     from botocore.awsrequest import AWSRequest
     from botocore.config import Config
+    from botocore.exceptions import ClientError
 except ImportError as e:
     raise ImportError("botocore is required for S3 operations. Install with tracktolib[s3-niquests]") from e
 
@@ -674,9 +675,16 @@ async def s3_multipart_upload(
         )
         xml_payload = f"<CompleteMultipartUpload>{parts_xml}</CompleteMultipartUpload>"
 
-        return (
+        response = (
             await client.post(complete_url, data=xml_payload, headers={"Content-Type": "application/xml"})
         ).raise_for_status()
+        root = ET.fromstring(response.content or b"")
+        if root.tag.rsplit("}", 1)[-1] == "Error":
+            raise ClientError(
+                {"Error": {child.tag.rsplit("}", 1)[-1]: child.text for child in root}},
+                "CompleteMultipartUpload",
+            )
+        return response
 
     async def fetch_abort():
         nonlocal _has_been_aborted
@@ -722,13 +730,13 @@ async def s3_multipart_upload(
             fetch_abort=fetch_abort,
             generate_presigned_url=_generate_presigned_url,
         )
-    except Exception as e:
-        if not _has_been_aborted and upload_id is not None:
-            await fetch_abort()
-        raise e
-    else:
         if not _has_been_aborted and upload_id is not None:
             await fetch_complete()
+    except BaseException:
+        if not _has_been_aborted and upload_id is not None:
+            with suppress(Exception):
+                await fetch_abort()
+        raise
 
 
 async def s3_file_upload(
