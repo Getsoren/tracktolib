@@ -1,3 +1,9 @@
+## 0.76.3 (2026-09-14)
+
+### Fix
+
+- confine bucket downloads to the output directory (#54)
+
 ## 0.76.2 (2026-09-14)
 
 ### Fix
