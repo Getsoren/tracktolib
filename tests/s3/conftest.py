@@ -7,21 +7,12 @@ import pytest
 from botocore.config import Config
 from minio import Minio
 
-# MinIO config
-MINIO_URL = os.environ.get("MINIO_URL", "localhost:9000")
-MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "foo")
-MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "foobarbaz")
-
-# Garage config
-GARAGE_URL = os.environ.get("GARAGE_URL", "localhost:9002")
-GARAGE_ACCESS_KEY = os.environ.get("GARAGE_ACCESS_KEY", "GK0123456789abcdef01234567")
-GARAGE_SECRET_KEY = os.environ.get(
-    "GARAGE_SECRET_KEY", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-)
+# Moto config (accepts any credentials)
+MOTO_URL = os.environ.get("MOTO_URL", "localhost:9000")
+MOTO_ACCESS_KEY = os.environ.get("MOTO_ACCESS_KEY", "foo")
+MOTO_SECRET_KEY = os.environ.get("MOTO_SECRET_KEY", "foobarbaz")
 
 S3_BUCKET = "test"
-
-GARAGE_AVAILABLE = True
 
 S3_CONFIG = Config(signature_version="s3v4", s3={"addressing_style": "path"})
 
@@ -37,34 +28,12 @@ class S3BackendConfig:
     region: str
 
 
-MINIO_BACKEND = S3BackendConfig(
-    name="minio",
-    endpoint_url=f"http://{MINIO_URL}",
-    access_key=MINIO_ACCESS_KEY,
-    secret_key=MINIO_SECRET_KEY,
+MOTO_BACKEND = S3BackendConfig(
+    name="moto",
+    endpoint_url=f"http://{MOTO_URL}",
+    access_key=MOTO_ACCESS_KEY,
+    secret_key=MOTO_SECRET_KEY,
     region="us-east-1",
-)
-
-GARAGE_BACKEND = S3BackendConfig(
-    name="garage",
-    endpoint_url=f"http://{GARAGE_URL}",
-    access_key=GARAGE_ACCESS_KEY,
-    secret_key=GARAGE_SECRET_KEY,
-    region="us-east-1",
-)
-
-
-def get_s3_backends():
-    """Return list of available S3 backends as pytest params."""
-    backends = [pytest.param(MINIO_BACKEND, id="minio")]
-    if GARAGE_AVAILABLE:
-        backends.append(pytest.param(GARAGE_BACKEND, id="garage"))
-    return backends
-
-
-# Skip markers
-requires_garage = pytest.mark.skipif(
-    not GARAGE_AVAILABLE, reason="Requires Garage (set GARAGE_ACCESS_KEY and GARAGE_SECRET_KEY)"
 )
 
 
@@ -85,7 +54,7 @@ def get_botocore_client(backend: S3BackendConfig):
 
 @pytest.fixture()
 def minio_client():
-    client = Minio(MINIO_URL, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=False)
+    client = Minio(MOTO_URL, access_key=MOTO_ACCESS_KEY, secret_key=MOTO_SECRET_KEY, secure=False)
     yield client
 
 
@@ -94,10 +63,9 @@ def s3_bucket():
     return S3_BUCKET
 
 
-@pytest.fixture(scope="function", params=get_s3_backends())
-def s3_backend(request) -> S3BackendConfig:
-    """Parametrized fixture providing each available S3 backend."""
-    return request.param
+@pytest.fixture(scope="function")
+def s3_backend() -> S3BackendConfig:
+    return MOTO_BACKEND
 
 
 @pytest.fixture(scope="function")
@@ -117,7 +85,7 @@ async def s3_client(s3_backend: S3BackendConfig):
 
 @pytest.fixture()
 async def setup_bucket(s3_bucket, s3_client, s3_backend: S3BackendConfig):
-    """Setup and teardown bucket for tests, works with any backend."""
+    """Setup and teardown bucket for tests."""
     try:
         await s3_client.empty_bucket(s3_bucket)
     except Exception:
@@ -136,54 +104,6 @@ async def setup_bucket(s3_bucket, s3_client, s3_backend: S3BackendConfig):
     except Exception:
         pass
     with get_botocore_client(s3_backend) as client:
-        try:
-            client.delete_bucket(Bucket=s3_bucket)
-        except Exception:
-            pass
-
-
-# Garage-only fixtures for website tests
-@pytest.fixture(scope="function")
-async def garage_client():
-    if not GARAGE_AVAILABLE:
-        pytest.skip("Garage not configured")
-    from tracktolib.s3.niquests import S3Session
-
-    client = S3Session(
-        endpoint_url=GARAGE_BACKEND.endpoint_url,
-        access_key=GARAGE_BACKEND.access_key,
-        secret_key=GARAGE_BACKEND.secret_key,
-        region=GARAGE_BACKEND.region,
-        s3_config=S3_CONFIG,
-    )
-    async with client:
-        yield client
-
-
-@pytest.fixture()
-async def setup_garage_bucket(s3_bucket, garage_client):
-    """Setup bucket in Garage for website tests."""
-    if not GARAGE_AVAILABLE:
-        pytest.skip("Garage not configured")
-
-    try:
-        await garage_client.empty_bucket(s3_bucket)
-    except Exception:
-        pass
-    with get_botocore_client(GARAGE_BACKEND) as client:
-        try:
-            client.delete_bucket(Bucket=s3_bucket)
-        except Exception:
-            pass
-        client.create_bucket(Bucket=s3_bucket)
-
-    yield
-
-    try:
-        await garage_client.empty_bucket(s3_bucket)
-    except Exception:
-        pass
-    with get_botocore_client(GARAGE_BACKEND) as client:
         try:
             client.delete_bucket(Bucket=s3_bucket)
         except Exception:
