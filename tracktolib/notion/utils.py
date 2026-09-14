@@ -228,8 +228,7 @@ async def download_page_to_markdown(
         user_ids: set[str] = set()
 
         async def fetch_block_comments(bid: str) -> tuple[str, list[Comment]]:
-            data = await fetch_comments(session, block_id=bid)
-            comments_list = data.get("results", [])
+            comments_list = await _fetch_all_comments(session, bid)
             if comments_list:
                 # Use actual parent block_id from comment to avoid race condition
                 actual_block_id = comments_list[0].get("parent", {}).get("block_id", bid)
@@ -391,13 +390,27 @@ async def fetch_all_page_blocks(
     return all_blocks
 
 
+async def _fetch_all_comments(session: niquests.AsyncSession, block_id: str) -> list[Comment]:
+    """Fetch every comments page for a page or block."""
+    comments: list[Comment] = []
+    cursor: str | None = None
+    while True:
+        response = await fetch_comments(session, block_id, start_cursor=cursor)
+        comments.extend(response.get("results", []))
+        if not response.get("has_more", False):
+            return comments
+        cursor = response.get("next_cursor")
+        if not cursor:
+            raise ValueError("Notion comments response has_more without next_cursor")
+
+
 async def _fetch_block_comments(
     session: niquests.AsyncSession, block: Block | PartialBlock
 ) -> list[tuple[str, str, Comment]]:
     block_id = block.get("id", "")
     block_type = block.get("type", "unknown")
-    resp = await fetch_comments(session, block_id)
-    return [(block_id, block_type, c) for c in resp.get("results", [])]
+    comments = await _fetch_all_comments(session, block_id)
+    return [(block_id, block_type, c) for c in comments]
 
 
 async def _fetch_user_with_id(session: niquests.AsyncSession, uid: str) -> tuple[str, str]:
@@ -433,8 +446,10 @@ async def fetch_all_page_comments(
     sem = asyncio.Semaphore(concurrency)
 
     # Fetch comments for all blocks
-    raw_comments: list[tuple[str, str, Comment]] = []
-    user_ids: set[str] = set()
+    raw_comments: list[tuple[str, str, Comment]] = [
+        (page_id, "page", c) for c in await _fetch_all_comments(session, page_id)
+    ]
+    user_ids: set[str] = {uid for _, _, c in raw_comments if (uid := c.get("created_by", {}).get("id"))}
 
     async for result in run_coros((_fetch_block_comments(session, b) for b in blocks), sem):
         for block_id, block_type, c in result:
