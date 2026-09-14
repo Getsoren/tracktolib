@@ -11,39 +11,6 @@ services:
       timeout: 5s
       retries: 5
 
-  garage:
-    image: dxflrs/garage:v2.2.0
-    container_name: garage-tracktolib
-    ports:
-      - "127.0.0.1:9002:3900"  # S3 API
-      - "127.0.0.1:9003:3903"  # Admin API
-      - "127.0.0.1:3902:3902"  # Web hosting
-    volumes:
-      - ./garage.toml:/etc/garage.toml:ro
-      - garage-data:/var/lib/garage
-    healthcheck:
-      test: ["CMD", "/garage", "status"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  garage-init:
-    build:
-      context: .
-      dockerfile: garage-init.Dockerfile
-    container_name: garage-init-tracktolib
-    depends_on:
-      garage:
-        condition: service_healthy
-    volumes:
-      - ./garage.toml:/etc/garage.toml:ro
-      - garage-data:/var/lib/garage:ro
-    network_mode: "service:garage"
-    healthcheck:
-      test: ["CMD", "true"]
-      interval: 1s
-      retries: 1
-
   postgres:
     image: postgres:18-alpine
     container_name: pg-tracktolib
@@ -59,6 +26,3 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-volumes:
-  garage-data:
