@@ -317,7 +317,8 @@ class JSONSerialResponse(JSONResponse):
             allow_nan=False,
             indent=None,
             separators=(",", ":"),
-            default=self.json_serial,
+            # json_serial is a plain function stored on the class; self.json_serial would bind it and pass self as the value
+            default=type(self).json_serial,
         ).encode("utf-8")
 
 
