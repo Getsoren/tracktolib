@@ -1,3 +1,9 @@
+## 1.0.1 (2026-09-14)
+
+### Fix
+
+- paginate GitHub list responses (#62)
+
 ## 1.0.0 (2026-09-14)
 
 ### BREAKING CHANGE
