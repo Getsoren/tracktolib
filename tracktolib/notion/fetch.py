@@ -211,16 +211,23 @@ async def fetch_page(session: niquests.AsyncSession, page_id: str) -> Page:
     return response.json()  # type: ignore[return-value]
 
 
-def _convert_parent_for_api_version(parent: dict[str, Any], api_version: str) -> dict[str, Any]:
-    """Convert parent dict between database_id and data_source_id based on API version."""
-    if _use_data_source_api(api_version):
-        # Convert database_id to data_source_id for new API
-        if "database_id" in parent:
-            return {"data_source_id": parent["database_id"]}
-    else:
-        # Convert data_source_id to database_id for old API
-        if "data_source_id" in parent:
-            return {"database_id": parent["data_source_id"]}
+async def _convert_parent_for_api_version(
+    session: niquests.AsyncSession, parent: dict[str, Any], api_version: str
+) -> dict[str, Any]:
+    """Resolve database parents while preserving explicitly supplied data source IDs."""
+    if "database_id" in parent and "data_source_id" in parent:
+        raise ValueError("Provide exactly one of database_id or data_source_id")
+    if _use_data_source_api(api_version) and "database_id" in parent:
+        response = await session.get(
+            f"{NOTION_API_URL}/v1/databases/{parent['database_id']}", headers={"Notion-Version": api_version}
+        )
+        response.raise_for_status()
+        sources = response.json().get("data_sources", [])
+        if len(sources) != 1:
+            raise ValueError("Database must have exactly one data source; provide data_source_id explicitly")
+        return {"data_source_id": sources[0]["id"]}
+    if not _use_data_source_api(api_version) and "data_source_id" in parent:
+        raise ValueError("data_source_id requires Notion API 2025-09-03 or later; provide database_id")
     return parent
 
 
@@ -234,14 +241,9 @@ async def create_page(
     cover: dict[str, Any] | None = None,
     api_version: ApiVersion | None = None,
 ) -> Page:
-    """Create a new page.
-
-    For API version 2025-09-03+, parent should use {"data_source_id": "..."}.
-    For older API versions, parent should use {"database_id": "..."}.
-    The function will automatically convert between the two formats.
-    """
+    """Create a page, resolving database parents to their sole data source for the new API."""
     _api_version = _get_api_version(session, api_version)
-    converted_parent = _convert_parent_for_api_version(parent, _api_version)
+    converted_parent = await _convert_parent_for_api_version(session, parent, _api_version)
     payload: dict[str, Any] = {
         "parent": converted_parent,
         "properties": properties,
@@ -253,7 +255,7 @@ async def create_page(
     if cover:
         payload["cover"] = cover
 
-    response = await session.post(f"{NOTION_API_URL}/v1/pages", json=payload)
+    response = await session.post(f"{NOTION_API_URL}/v1/pages", json=payload, headers={"Notion-Version": _api_version})
     response.raise_for_status()
     return response.json()  # type: ignore[return-value]
 
@@ -313,15 +315,7 @@ async def fetch_database(
     api_version: ApiVersion | None = None,
     cache: NotionCache | None = None,
 ) -> Database | CachedDatabase:
-    """Retrieve a database/data source by ID.
-
-    For API version 2025-09-03+, uses /v1/data_sources/{id} endpoint.
-    For older API versions, uses /v1/databases/{id} endpoint.
-
-    If cache is provided, the database will be looked up in the cache first.
-    On cache miss, the database is fetched from the API and stored in the cache.
-    When returning from cache, returns a CachedDatabase (partial) instead of full Database.
-    """
+    """Fetch a schema using a data source ID for API 2025-09-03+, otherwise a database ID."""
     if cache:
         if cached := cache.get_database(database_id):
             return cached
@@ -332,7 +326,7 @@ async def fetch_database(
     else:
         endpoint = f"{NOTION_API_URL}/v1/databases/{database_id}"
 
-    response = await session.get(endpoint)
+    response = await session.get(endpoint, headers={"Notion-Version": _api_version})
     response.raise_for_status()
     result: Database = response.json()
 
@@ -352,11 +346,7 @@ async def query_database(
     page_size: int | None = None,
     api_version: ApiVersion | None = None,
 ) -> PageListResponse:
-    """Query a database/data source.
-
-    For API version 2025-09-03+, uses /v1/data_sources/{id}/query endpoint.
-    For older API versions, uses /v1/databases/{id}/query endpoint.
-    """
+    """Query using a data source ID for API 2025-09-03+, otherwise a database ID."""
     _api_version = _get_api_version(session, api_version)
     payload: dict[str, Any] = {}
     if filter:
@@ -373,7 +363,7 @@ async def query_database(
     else:
         endpoint = f"{NOTION_API_URL}/v1/databases/{database_id}/query"
 
-    response = await session.post(endpoint, json=payload or None)
+    response = await session.post(endpoint, json=payload or None, headers={"Notion-Version": _api_version})
     response.raise_for_status()
     return response.json()  # type: ignore[return-value]
 
@@ -539,7 +529,9 @@ async def fetch_search(
     if page_size:
         payload["page_size"] = page_size
 
-    response = await session.post(f"{NOTION_API_URL}/v1/search", json=payload or None)
+    response = await session.post(
+        f"{NOTION_API_URL}/v1/search", json=payload or None, headers={"Notion-Version": _api_version}
+    )
     response.raise_for_status()
     return response.json()  # type: ignore[return-value]
 

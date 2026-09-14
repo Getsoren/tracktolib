@@ -196,16 +196,16 @@ from tracktolib.notion.cache import NotionCache
 async with niquests.AsyncSession() as session:
     session.headers.update(get_notion_headers())
 
-    # Without cache
-    db = await fetch_database(session, "database-id")
+    # API 2025-09-03+ requires a data source ID; older versions use a database ID.
+    db = await fetch_database(session, "data-source-id")
 
     # With persistent cache (stored in ~/.cache/tracktolib/notion/cache.json)
     cache = NotionCache()
-    db = await fetch_database(session, "database-id", cache=cache)
+    db = await fetch_database(session, "data-source-id", cache=cache)
 
     # Check cached databases
     cache.get_databases()           # All cached databases
-    cache.get_database("db-id")     # Specific database (id, title, properties, cached_at)
+    cache.get_database("data-source-id")  # Specific schema (id, title, properties, cached_at)
 ```
 
 ### gh
