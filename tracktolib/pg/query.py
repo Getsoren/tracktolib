@@ -141,17 +141,23 @@ class PGQuery[K: str, V]:
         else:
             await conn.executemany(self.query, self.values, timeout=timeout)  # type: ignore
 
+    def _get_fetch_values(self):
+        # fetch* bind values positionally, so a batch can only be fetched when INSERT RETURNING flattens it
+        if len(self.items) != 1:
+            raise ValueError("Fetching batch results requires an INSERT with RETURNING")
+        return self.values
+
     async def fetch(self, conn: _Connection, timeout: float | None = None) -> list[asyncpg.Record]:
-        return await conn.fetch(self.query, self._get_values(), timeout=timeout)
+        return await conn.fetch(self.query, *self._get_fetch_values(), timeout=timeout)
 
     async def fetchrow(self, conn: _Connection, timeout: float | None = None) -> asyncpg.Record | None:
-        return await conn.fetchrow(self.query, *self._get_values(), timeout=timeout)
+        return await conn.fetchrow(self.query, *self._get_fetch_values(), timeout=timeout)
 
     async def fetchval(self, conn: _Connection, *, column: int = 0, timeout: float | None = None):
-        return await conn.fetchval(self.query, *self._get_values(), timeout=timeout, column=column)
+        return await conn.fetchval(self.query, *self._get_fetch_values(), timeout=timeout, column=column)
 
     async def exists(self, conn: _Connection, *, timeout: float | None = None) -> bool:
-        _exists = await conn.fetchval(f"SELECT EXISTS({self.query})", *self._get_values(), timeout=timeout)
+        _exists = await conn.fetchval(f"SELECT EXISTS({self.query})", *self._get_fetch_values(), timeout=timeout)
         return _exists or False
 
 
@@ -232,6 +238,12 @@ class PGInsertQuery(PGQuery):
     def _get_flat_values(self) -> list:
         """Get all values as a flat list for multi-row insert with returning."""
         return [val for item_values in self.iter_values() for val in item_values]
+
+    def _get_fetch_values(self):
+        """Flatten multi-row INSERT RETURNING values, since fetch* bind them positionally."""
+        if self.is_returning:
+            return self._get_flat_values()
+        return super()._get_fetch_values()
 
 
 def get_update_fields(
@@ -338,6 +350,11 @@ class PGUpdateQuery(PGQuery):
                 )
             return "WHERE " + " AND ".join(f"{k} = ${i + start_from + 1}" for i, k in enumerate(self.where_keys))
         return ""
+
+    def _get_fetch_values(self):
+        if self.is_many:
+            raise ValueError("Fetching batch UPDATE results is not supported")
+        return super()._get_fetch_values()
 
     @property
     def query(self) -> str:
