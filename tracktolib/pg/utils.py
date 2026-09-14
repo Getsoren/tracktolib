@@ -63,6 +63,16 @@ def _str_to_point(value: str) -> tuple[float, ...] | None:
     return tuple(float(x) for x in value.split(",")) if value else None
 
 
+def _str_to_bool(value: str) -> bool:
+    match value.strip().lower():
+        case "true" | "t" | "yes" | "y" | "on" | "1":
+            return True
+        case "false" | "f" | "no" | "n" | "off" | "0":
+            return False
+        case _:
+            raise ValueError(f"Invalid boolean value: {value!r}")
+
+
 def _get_type(data_type: str, char_max_length: int | None):
     match data_type:
         case "integer":
@@ -74,7 +84,7 @@ def _get_type(data_type: str, char_max_length: int | None):
         case "date":
             return _str_to_date
         case "boolean":
-            return bool
+            return _str_to_bool
         case "point":
             return _str_to_point
 
