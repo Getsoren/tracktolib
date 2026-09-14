@@ -107,13 +107,25 @@ class GitHubClient:
         """Close the underlying session."""
         await self.session.close()
 
+    async def _get_all(self, url: str, *, params: dict[str, str] | None = None) -> list[Any]:
+        """Collect list responses by following GitHub's next-page links."""
+        results: list[Any] = []
+        # GitHub defaults to 30 items per page; 100 is the maximum
+        params = {"per_page": "100", **(params or {})}
+        while True:
+            response = await self.session.get(url, params=params)
+            _raise_for_status(response)
+            results.extend(response.json())
+            if not (next_url := response.links.get("next", {}).get("url")):
+                return results
+            url = next_url
+            params = None
+
     # Issue Comments
 
     async def get_issue_comments(self, repository: str, issue_number: int) -> list[IssueComment]:
         """Get all comments on an issue or PR."""
-        response = await self.session.get(f"/repos/{repository}/issues/{issue_number}/comments")
-        _raise_for_status(response)
-        return cast("list[IssueComment]", response.json())
+        return await self._get_all(f"/repos/{repository}/issues/{issue_number}/comments")
 
     async def create_issue_comment(self, repository: str, issue_number: int, body: str) -> IssueComment:
         """Create a comment on an issue or PR."""
@@ -179,9 +191,7 @@ class GitHubClient:
 
     async def get_issue_labels(self, repository: str, issue_number: int) -> list[Label]:
         """Get all labels on an issue or PR."""
-        response = await self.session.get(f"/repos/{repository}/issues/{issue_number}/labels")
-        _raise_for_status(response)
-        return cast("list[Label]", response.json())
+        return await self._get_all(f"/repos/{repository}/issues/{issue_number}/labels")
 
     async def add_labels(self, repository: str, issue_number: int, labels: list[str]) -> list[Label]:
         """Add labels to an issue or PR."""
@@ -215,9 +225,7 @@ class GitHubClient:
             params["head"] = head
         if base is not None:
             params["base"] = base
-        response = await self.session.get(f"/repos/{repository}/pulls", params=params)
-        _raise_for_status(response)
-        return cast("list[PullRequestSimple]", response.json())
+        return await self._get_all(f"/repos/{repository}/pulls", params=params)
 
     async def get_pull_request(self, repository: str, number: int) -> PullRequest:
         """Get a single pull request, with the fields list_pull_requests does not return (changed_files, ...)."""
@@ -283,9 +291,7 @@ class GitHubClient:
     async def get_deployments(self, repository: str, *, environment: str | None = None) -> list[Deployment]:
         """Get deployments, optionally filtered by environment."""
         params = {"environment": environment} if environment else {}
-        response = await self.session.get(f"/repos/{repository}/deployments", params=params)
-        _raise_for_status(response)
-        return cast("list[Deployment]", response.json())
+        return await self._get_all(f"/repos/{repository}/deployments", params=params)
 
     async def create_deployment_status(
         self,
@@ -316,9 +322,7 @@ class GitHubClient:
         deployment_id: int,
     ) -> list[DeploymentStatus]:
         """Get all statuses for a deployment, most recent first."""
-        response = await self.session.get(f"/repos/{repository}/deployments/{deployment_id}/statuses")
-        _raise_for_status(response)
-        return cast("list[DeploymentStatus]", response.json())
+        return await self._get_all(f"/repos/{repository}/deployments/{deployment_id}/statuses")
 
     async def get_latest_deployment_status(
         self,
