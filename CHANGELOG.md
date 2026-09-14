@@ -1,3 +1,9 @@
+## 0.75.2 (2026-09-14)
+
+### Fix
+
+- **utils**: preserve literal command arguments (#68)
+
 ## 0.75.1 (2026-09-14)
 
 ### Fix
