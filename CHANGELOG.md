@@ -1,3 +1,9 @@
+## 0.75.1 (2026-09-14)
+
+### Fix
+
+- read tracktolib package version (#69)
+
 ## 0.75.0 (2026-07-13)
 
 ### Feat
