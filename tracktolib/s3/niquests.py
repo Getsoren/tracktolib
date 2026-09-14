@@ -492,8 +492,7 @@ async def s3_list_files(
                 item[tag] = child.text
             if "Size" in item:
                 item["Size"] = int(item["Size"])
-            # URL-decode the Key (some S3-compatible servers like Garage return URL-encoded keys)
-            if "Key" in item and item["Key"]:
+            if root.findtext("s3:EncodingType", namespaces=ns) == "url" and item.get("Key"):
                 item["Key"] = unquote(item["Key"])
             page_items.append(item)
 

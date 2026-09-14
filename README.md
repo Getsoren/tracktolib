@@ -164,48 +164,12 @@ async with S3Session(
     result = await s3.sync_directory('bucket', Path('./local'), 'remote/prefix', delete=True)
 ```
 
-### http (deprecated)
-
-HTTP client helpers using [httpx](https://www.python-httpx.org/).
-
-```bash
-uv add tracktolib[http]
-```
-
 ### api
 
 FastAPI utilities using [fastapi](https://fastapi.tiangolo.com/) and [pydantic](https://docs.pydantic.dev/).
 
 ```bash
 uv add tracktolib[api]
-```
-
-### notion
-
-Notion API helpers using [niquests](https://github.com/jawah/niquests).
-
-```bash
-uv add tracktolib[notion]
-```
-
-```python
-import niquests
-from tracktolib.notion.fetch import fetch_database, get_notion_headers
-from tracktolib.notion.cache import NotionCache
-
-async with niquests.AsyncSession() as session:
-    session.headers.update(get_notion_headers())
-
-    # Without cache
-    db = await fetch_database(session, "database-id")
-
-    # With persistent cache (stored in ~/.cache/tracktolib/notion/cache.json)
-    cache = NotionCache()
-    db = await fetch_database(session, "database-id", cache=cache)
-
-    # Check cached databases
-    cache.get_databases()           # All cached databases
-    cache.get_database("db-id")     # Specific database (id, title, properties, cached_at)
 ```
 
 ### gh

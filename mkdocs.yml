@@ -48,8 +48,6 @@ nav:
       - S3 (MinIO): modules/s3-minio.md
       - S3 (Niquests): modules/s3-niquests.md
       - API (FastAPI): modules/api.md
-      - HTTP (Deprecated): modules/http.md
-      - Notion: modules/notion.md
       - Tests: modules/tests.md
 
 plugins:
