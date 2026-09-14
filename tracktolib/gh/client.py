@@ -112,6 +112,7 @@ class GitHubClient:
         results: list[Any] = []
         # GitHub defaults to 30 items per page; 100 is the maximum
         params = {"per_page": "100", **(params or {})}
+        # Pages are fetched serially: GitHub asks for serial requests per token to avoid secondary rate limits
         while True:
             response = await self.session.get(url, params=params)
             _raise_for_status(response)
