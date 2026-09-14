@@ -7,8 +7,8 @@ authors = [
 description = "Utility library for python"
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/tracktor/tracktolib"
-repository = "https://github.com/tracktor/tracktolib"
+homepage = "https://github.com/Getsoren/tracktolib"
+repository = "https://github.com/Getsoren/tracktolib"
 keywords = ["utility"]
 classifiers = [
     "Operating System :: OS Independent",

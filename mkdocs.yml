@@ -2,7 +2,7 @@ site_name: Tracktolib
 site_description: Tracktor Swiss-knife Utility library for Python.
 site_author: Tracktor
 site_url: https://tracktor.github.io/tracktolib
-repo_url: https://github.com/Tracktor/tracktolib
+repo_url: https://github.com/Getsoren/tracktolib
 repo_name: Tracktor/tracktolib
 
 docs_dir: docs

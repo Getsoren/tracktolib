@@ -2,7 +2,7 @@
 
 [![Python versions](https://img.shields.io/pypi/pyversions/tracktolib)](https://pypi.python.org/pypi/tracktolib)
 [![Latest PyPI version](https://img.shields.io/pypi/v/tracktolib?logo=pypi)](https://pypi.python.org/pypi/tracktolib)
-[![CI](https://github.com/Tracktor/tracktolib/actions/workflows/ci.yml/badge.svg)](https://github.com/Tracktor/tracktolib/actions/workflows/ci.yml)
+[![CI](https://github.com/Getsoren/tracktolib/actions/workflows/ci.yml/badge.svg)](https://github.com/Getsoren/tracktolib/actions/workflows/ci.yml)
 
 Tracktor Swiss-knife Utility library.
 
