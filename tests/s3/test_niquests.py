@@ -5,7 +5,7 @@ from pathlib import Path
 import niquests
 import pytest
 
-from tests.s3.conftest import GARAGE_BACKEND, get_botocore_client, requires_garage
+from tests.s3.conftest import get_botocore_client
 
 S3_BUCKET = "test-niquests"
 
@@ -370,17 +370,14 @@ class TestS3BucketManagement:
         ],
     )
     async def test_bucket_policy_crud(self, s3_bucket, s3_backend, policy_input, policy_type):
-        """Test put, get, and delete bucket policy operations (MinIO only)."""
-        if s3_backend.name != "minio":
-            pytest.skip(f"Bucket policy not supported on {s3_backend.name}")
-
+        """Test put, get, and delete bucket policy operations."""
         from tracktolib.s3.niquests import s3_delete_bucket_policy, s3_get_bucket_policy, s3_put_bucket_policy
 
         with get_botocore_client(s3_backend) as s3:
             async with niquests.AsyncSession() as client:
                 # Put policy
                 resp = await s3_put_bucket_policy(s3, client, s3_bucket, policy_input)
-                assert resp.status_code == 204
+                assert resp.status_code in (200, 204)  # AWS/MinIO 204, moto 200
 
                 # Get policy
                 result = await s3_get_bucket_policy(s3, client, s3_bucket)
@@ -390,20 +387,17 @@ class TestS3BucketManagement:
 
                 # Delete policy
                 resp = await s3_delete_bucket_policy(s3, client, s3_bucket)
-                assert resp.status_code == 204
+                assert resp.status_code in (200, 204)
 
     async def test_get_bucket_policy_nonexistent(self, s3_bucket, s3_backend):
-        """Test getting a bucket policy that doesn't exist (MinIO only)."""
-        if s3_backend.name != "minio":
-            pytest.skip(f"Bucket policy not supported on {s3_backend.name}")
-
+        """Test getting a bucket policy that doesn't exist."""
         from tracktolib.s3.niquests import s3_get_bucket_policy
 
         with get_botocore_client(s3_backend) as s3:
             async with niquests.AsyncSession() as client:
                 # Get non-existent policy (should return None or raise depending on provider)
                 result = await s3_get_bucket_policy(s3, client, s3_bucket)
-                # MinIO returns empty on no policy, behavior may vary
+                # Providers differ on missing policies (empty body vs error)
                 assert result is None or isinstance(result, dict)
 
     @pytest.mark.parametrize(
@@ -441,11 +435,8 @@ class TestS3BucketManagement:
 
 @pytest.mark.usefixtures("setup_bucket")
 class TestS3SessionBucketManagement:
-    async def test_session_bucket_policy(self, s3_bucket, s3_client, s3_backend):
-        """Test S3Session bucket policy methods (MinIO only)."""
-        if s3_backend.name != "minio":
-            pytest.skip(f"Bucket policy not supported on {s3_backend.name}")
-
+    async def test_session_bucket_policy(self, s3_bucket, s3_client):
+        """Test S3Session bucket policy methods."""
         policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -460,7 +451,7 @@ class TestS3SessionBucketManagement:
 
         # Put policy
         resp = await s3_client.put_bucket_policy(s3_bucket, policy)
-        assert resp.status_code == 204
+        assert resp.status_code in (200, 204)  # AWS/MinIO 204, moto 200
 
         # Get policy
         result = await s3_client.get_bucket_policy(s3_bucket)
@@ -469,7 +460,7 @@ class TestS3SessionBucketManagement:
 
         # Delete policy
         resp = await s3_client.delete_bucket_policy(s3_bucket)
-        assert resp.status_code == 204
+        assert resp.status_code in (200, 204)
 
     async def test_session_empty_bucket(self, s3_bucket, s3_client):
         """Test S3Session empty_bucket method."""
@@ -486,10 +477,8 @@ class TestS3SessionBucketManagement:
         assert len(files) == 0
 
 
-# Website tests require Garage (MinIO doesn't support website configuration)
-@pytest.mark.usefixtures("setup_garage_bucket")
+@pytest.mark.usefixtures("setup_bucket")
 class TestS3WebsiteConfig:
-    @requires_garage
     @pytest.mark.parametrize(
         ("index_document", "error_document"),
         [
@@ -498,11 +487,11 @@ class TestS3WebsiteConfig:
             pytest.param("home.htm", "404.htm", id="custom_names"),
         ],
     )
-    async def test_bucket_website_config(self, s3_bucket, index_document, error_document):
+    async def test_bucket_website_config(self, s3_bucket, s3_backend, index_document, error_document):
         """Test put and delete bucket website configuration."""
         from tracktolib.s3.niquests import s3_delete_bucket_website, s3_put_bucket_website
 
-        with get_botocore_client(GARAGE_BACKEND) as s3:
+        with get_botocore_client(s3_backend) as s3:
             async with niquests.AsyncSession() as client:
                 # Put website config
                 resp = await s3_put_bucket_website(s3, client, s3_bucket, index_document, error_document)
@@ -512,15 +501,14 @@ class TestS3WebsiteConfig:
                 resp = await s3_delete_bucket_website(s3, client, s3_bucket)
                 assert resp.status_code == 204
 
-    @requires_garage
-    async def test_session_bucket_website(self, s3_bucket, garage_client):
+    async def test_session_bucket_website(self, s3_bucket, s3_client):
         """Test S3Session bucket website methods."""
         # Put website config
-        resp = await garage_client.put_bucket_website(s3_bucket, "index.html", "error.html")
+        resp = await s3_client.put_bucket_website(s3_bucket, "index.html", "error.html")
         assert resp.status_code == 200
 
         # Delete website config
-        resp = await garage_client.delete_bucket_website(s3_bucket)
+        resp = await s3_client.delete_bucket_website(s3_bucket)
         assert resp.status_code == 204
 
 
