@@ -34,8 +34,11 @@ SCHEMAS=(
   "nullable-integration"
 
   "reaction-rollup"
+  "reaction"
 
   "pull-request-simple"
+  "pull-request"
+  "pull-request-review"
 )
 
 echo "Downloading GitHub OpenAPI spec..."
@@ -55,7 +58,7 @@ jq --argjson schemas "[$SCHEMA_FILTER]" '
   }
 }' "$TEMP_FULL" > "$TEMP_SPEC"
 
-# Patch pull-request-simple to avoid heavy deps (repository, team, nullable-milestone, etc.)
+# Patch pull-request-simple/pull-request/pull-request-review to avoid heavy deps (repository, team, etc.)
 # Keep all properties but replace complex $ref ones with plain object types,
 # except labels (use label $ref), head/base (keep ref/label/sha only).
 jq '
@@ -83,6 +86,31 @@ def obj_array: { type: "array", items: { type: "object" } };
   .requested_teams = obj_array |
   ._links = obj |
   .author_association = { type: "string" }
+) |
+.components.schemas["pull-request"].properties |= (
+  .labels = { type: "array", items: { "$ref": "#/components/schemas/label" } } |
+  .head = {
+    type: "object",
+    properties: { ref: { type: "string" }, label: { type: "string" }, sha: { type: "string" } },
+    required: ["ref", "label", "sha"]
+  } |
+  .base = {
+    type: "object",
+    properties: { ref: { type: "string" }, label: { type: "string" }, sha: { type: "string" } },
+    required: ["ref", "label", "sha"]
+  } |
+  .milestone = nullable_obj |
+  .auto_merge = nullable_obj |
+  .stack = nullable_obj |
+  .assignees = obj_array |
+  .requested_reviewers = obj_array |
+  .requested_teams = obj_array |
+  ._links = obj |
+  .author_association = { type: "string" }
+) |
+.components.schemas["pull-request-review"].properties |= (
+  ._links = obj |
+  .author_association = { type: "string" }
 )
 ' "$TEMP_SPEC" > "$TEMP_SPEC.tmp" && mv "$TEMP_SPEC.tmp" "$TEMP_SPEC"
 
@@ -103,6 +131,10 @@ uv run datamodel-codegen \
   --openapi-scopes schemas
 
 # Clean up generated file (portable sed - works on both macOS and Linux)
-sed '/^#   filename:/d' "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
+# TypedDict is imported from typing_extensions (extra_items support), drop the typing one
+sed -e '/^#   filename:/d' -e 's/^from typing import \(.*\), TypedDict$/from typing import \1/' \
+  "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
+
+uv run ruff format "$OUTPUT_FILE"
 
 echo "Done! Generated $(wc -l < "$OUTPUT_FILE") lines to $OUTPUT_FILE"
