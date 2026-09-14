@@ -40,10 +40,10 @@ def exec_cmd(
 
     process = subprocess.Popen(
         cmd,
-        shell=True,
+        shell=isinstance(cmd, str),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        executable=default_shell,
+        executable=default_shell if isinstance(cmd, str) else None,
         env=env,
         text=True,
         **kwargs,
@@ -65,12 +65,14 @@ def exec_cmd(
 
 
 async def aexec_cmd(cmd: str | list[str], *, encoding: str = "utf-8", env: dict | None = None) -> str:
-    _cmd = cmd if isinstance(cmd, str) else " ".join(cmd)
     default_shell = os.getenv("SHELL", "/bin/bash")
 
-    proc = await asyncio.create_subprocess_shell(
-        _cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, executable=default_shell, env=env
-    )
+    if isinstance(cmd, str):
+        proc = await asyncio.create_subprocess_shell(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, executable=default_shell, env=env
+        )
+    else:
+        proc = await asyncio.create_subprocess_exec(*cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
         raise Exception(stderr.decode(encoding))

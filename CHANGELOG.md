@@ -1,3 +1,34 @@
+## 0.76.2 (2026-09-14)
+
+### Fix
+
+- preserve column order in synchronous batch inserts (#55)
+
+## 0.76.1 (2026-09-14)
+
+### Fix
+
+- parse CSV boolean values explicitly (#57)
+- reject inconsistent expressions in batch queries (#56)
+
+## 0.76.0 (2026-09-14)
+
+### Feat
+
+- **gh**: add pull request review methods to GitHubClient (#53)
+
+## 0.75.2 (2026-09-14)
+
+### Fix
+
+- **utils**: preserve literal command arguments (#68)
+
+## 0.75.1 (2026-09-14)
+
+### Fix
+
+- read tracktolib package version (#69)
+
 ## 0.75.0 (2026-07-13)
 
 ### Feat

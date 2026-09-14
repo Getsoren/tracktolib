@@ -1,3 +1,4 @@
+from operator import itemgetter
 from pathlib import Path
 from typing import Any, Iterable, Literal, LiteralString, Mapping, Optional, Sequence, cast, overload
 
@@ -77,7 +78,16 @@ def get_insert_data(
     keys = data[0].keys()
     _values = ",".join("%s" for _ in range(0, len(keys)))
     query = cast(LiteralString, f"INSERT INTO {table} as t ({','.join(keys)}) VALUES ({_values})")
-    return query, [tuple(_parse_value(_x) for _x in x.values()) for x in data]
+    # itemgetter returns a scalar for a single key, so wrap that case
+    get = itemgetter(*keys) if len(keys) > 1 else (lambda row, key=next(iter(keys)): (row[key],))
+    # Same-length rows with every key present have exactly the same columns
+    try:
+        rows = [tuple(map(_parse_value, get(row))) for row in data if len(row) == len(keys)]
+    except KeyError as e:
+        raise ValueError("Inconsistent columns across insert rows") from e
+    if len(rows) != len(data):
+        raise ValueError("Inconsistent columns across insert rows")
+    return query, rows
 
 
 def insert_many(engine: Connection | Cursor, table: LiteralString, data: Sequence[Mapping[str, Any]]):

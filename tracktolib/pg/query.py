@@ -128,6 +128,13 @@ class PGQuery[K: str, V]:
     def _get_values(self):
         return next(self.iter_values()) if len(self.items) == 1 else list(self.iter_values())
 
+    def _check_batch_expressions(self):
+        first = {k: v for k, v in self.items[0].items() if isinstance(v, SQLExpr)}
+        for item in self.items[1:]:
+            expressions = {k: v for k, v in item.items() if isinstance(v, SQLExpr)}
+            if expressions != first:
+                raise ValueError("Inconsistent SQLExpr columns or expressions across rows for executemany")
+
     async def run(self, conn: _Connection, timeout: float | None = None):
         if len(self.items) == 1:
             await conn.execute(self.query, *self.values, timeout=timeout)  # type: ignore
@@ -164,23 +171,15 @@ class PGInsertQuery(PGQuery):
     def _get_values_query(self) -> str:
         """Generate the VALUES clause for the query."""
         if len(self.items) == 1 or not self.is_returning:
-            counter, parts, first_expr = 0, [], set()
+            self._check_batch_expressions()
+            counter, parts = 0, []
             for k in self.keys:
                 v = self.items[0][k]
                 if isinstance(v, SQLExpr):
                     parts.append(v)
-                    first_expr.add(k)
                 else:
                     counter += 1
                     parts.append(f"${counter}")
-            if first_expr and len(self.items) > 1:
-                for item in self.items[1:]:
-                    expr = {k for k in self.keys if isinstance(item[k], SQLExpr)}
-                    if expr != first_expr:
-                        raise ValueError(
-                            f"Inconsistent SQLExpr columns across rows for executemany: "
-                            f"expected {first_expr}, got {expr}"
-                        )
             return ", ".join(parts)
         else:
             # Multiple rows with returning: single VALUES list with flat params
@@ -298,6 +297,7 @@ class PGUpdateQuery(PGQuery):
     _values: list | None = field(init=False, default=None)
 
     def __post_init__(self):
+        self._check_batch_expressions()
         if self.where_keys:
             self._check_keys(self.where_keys)
             # Ordering the keys

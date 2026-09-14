@@ -230,6 +230,19 @@ async with GitHubClient() as gh:  # Uses GITHUB_TOKEN env var
     await gh.add_labels("owner/repo", 123, ["bug", "priority"])
     await gh.remove_label("owner/repo", 123, "wontfix")
 
+    # Pull requests
+    pr = await gh.get_pull_request("owner/repo", 42)
+    diff = await gh.get_pull_request_diff("owner/repo", 42)
+    await gh.create_pull_request_review(
+        "owner/repo", 42,
+        body="Found a few things",
+        event="REQUEST_CHANGES",
+        comments=[{"path": "app/main.py", "line": 12, "side": "RIGHT", "body": "This can be None here"}],
+    )
+
+    # Permissions
+    permission = await gh.get_collaborator_permission("owner/repo", "octocat")  # admin, write, read or none
+
     # Deployments
     deploys = await gh.get_deployments("owner/repo", environment="production")
     await gh.mark_deployment_inactive("owner/repo", "preview-123")

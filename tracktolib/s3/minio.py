@@ -8,14 +8,18 @@ except ImportError:
 
 
 def download_bucket(minio: Minio, bucket_name: str, output_dir: Path) -> list[Path]:
+    destination = output_dir.resolve()
     files = []
     for obj in minio.list_objects(bucket_name, recursive=True):
         if obj.object_name is None:
             raise ValueError("object_name is empty")
-        data = minio.get_object(bucket_name, obj.object_name)
         _file = output_dir / obj.object_name
+        resolved_file = _file.resolve()
+        if Path(obj.object_name).is_absolute() or not resolved_file.is_relative_to(destination):
+            raise ValueError(f"Object key escapes output directory: {obj.object_name!r}")
+        data = minio.get_object(bucket_name, obj.object_name)
         _file.parent.mkdir(exist_ok=True, parents=True)
-        with (output_dir / obj.object_name).open("wb") as file_data:
+        with resolved_file.open("wb") as file_data:
             for d in data.stream(32 * 1024):
                 file_data.write(d)
         files.append(_file)
