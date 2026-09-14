@@ -28,8 +28,6 @@ Tracktolib is organized into modules, each providing utilities for specific use 
 | [API (FastAPI)](modules/api.md) | `api` | FastAPI utilities and endpoint builders |
 | [Cloudflare](modules/cf.md) | `cf` | Cloudflare DNS API helpers |
 | [GitHub](modules/gh.md) | `gh` | GitHub API helpers |
-| [HTTP](modules/http.md) | `http` | HTTP client helpers (deprecated) |
-| [Notion](modules/notion.md) | `notion` | Notion API helpers |
 
 ## Utilities
 
@@ -55,5 +53,5 @@ uv add tracktolib[pg,api,logs]
 Install all extras:
 
 ```bash
-uv add tracktolib[pg,pg-sync,s3,s3-minio,s3-niquests,api,cf,gh,http,logs,tests,notion]
+uv add tracktolib[pg,pg-sync,s3,s3-minio,s3-niquests,api,cf,gh,logs,tests]
 ```

@@ -27,9 +27,7 @@ uv add tracktolib[pg-sync,api]
 | `s3-minio`    | S3 helpers (minio)                       |
 | `s3-niquests` | S3 helpers (niquests + botocore)         |
 | `api`         | FastAPI utilities                        |
-| `http`        | HTTP client helpers (httpx) - deprecated |
 | `logs`        | Logging configuration                    |
-| `notion`      | Notion API helpers                       |
 | `tests`       | Testing utilities (deepdiff)             |
 
 ## Quick Example
