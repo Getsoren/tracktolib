@@ -1,3 +1,9 @@
+## 0.76.6 (2026-09-14)
+
+### Fix
+
+- honor S3 listing encoding declarations (#58)
+
 ## 0.76.5 (2026-09-14)
 
 ### Fix
