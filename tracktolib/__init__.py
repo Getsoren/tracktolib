@@ -1,7 +1,7 @@
 from importlib import metadata
 
 try:
-    __version__ = metadata.version("padmy")
+    __version__ = metadata.version("tracktolib")
 except metadata.PackageNotFoundError:
     __version__ = "0.0.0"
 
