@@ -1,3 +1,9 @@
+## 1.0.3 (2026-09-14)
+
+### Fix
+
+- allow returning update keys without where keys (#66)
+
 ## 1.0.2 (2026-09-14)
 
 ### Fix
