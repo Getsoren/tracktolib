@@ -270,6 +270,28 @@ def insert_data(engine):
             id="on_conflict",
         ),
         pytest.param(
+            None,
+            {
+                "table": "foo.foo",
+                "item": {"id": 1, "foo": 1, "bar": "baz"},
+                "on_conflict": PGConflictQuery(keys=["id"], update_where="t.bar = EXCLUDED.bar"),
+            },
+            "SELECT bar, foo FROM foo.foo WHERE id = 1",
+            [{"bar": "baz", "foo": 1}],
+            id="on conflict update_where match",
+        ),
+        pytest.param(
+            None,
+            {
+                "table": "foo.foo",
+                "item": {"id": 1, "foo": 1, "bar": "other"},
+                "on_conflict": PGConflictQuery(keys=["id"], update_where="t.bar = EXCLUDED.bar"),
+            },
+            "SELECT bar, foo FROM foo.foo WHERE id = 1",
+            [{"bar": "baz", "foo": 10}],
+            id="on conflict update_where mismatch",
+        ),
+        pytest.param(
             lambda engine: (insert_one(engine, "foo.baz", {"id": 0, "baz": {"foo": 1}})),
             {
                 "table": "foo.baz",

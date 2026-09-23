@@ -35,6 +35,7 @@ def _get_on_conflict_query[K: str](
     on_conflict: K | None,
     where: K | None,
     merge_columns: Iterable[K] | None,
+    update_where: str | None = None,
 ) -> str:
     _on_conflict = get_conflict_query(
         columns=columns,
@@ -44,6 +45,7 @@ def _get_on_conflict_query[K: str](
         on_conflict=on_conflict,
         where=where,
         merge_columns=merge_columns,
+        update_where=update_where,
     )
     return f"{query} {_on_conflict}"
 
@@ -78,6 +80,8 @@ class PGConflictQuery[K: str]:
     where: str | None = None
     """JSONB keys to merge (like jsonb1 || newjsonb2)"""
     merge_keys: Iterable[K] | None = None
+    """Guard on DO UPDATE (e.g. `t.owner_id = EXCLUDED.owner_id`); conflicting rows failing it are skipped"""
+    update_where: str | None = None
 
     def __post_init__(self):
         _has_keys = 1 if (self.keys or self.ignore_keys) else 0
@@ -225,6 +229,7 @@ class PGInsertQuery(PGQuery):
                 self.on_conflict.query,
                 self.on_conflict.where,
                 self.on_conflict.merge_keys,
+                self.on_conflict.update_where,
             )
 
         # Returning

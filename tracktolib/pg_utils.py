@@ -40,6 +40,7 @@ def get_conflict_query(
     on_conflict: str | None = None,
     where: str | None = None,
     merge_columns: Iterable[str] | None = None,
+    update_where: str | None = None,
 ) -> LiteralString:
     if on_conflict:
         return cast(LiteralString, on_conflict)
@@ -71,4 +72,7 @@ def get_conflict_query(
     if not fields:
         raise ValueError("No fields set")
 
-    return cast(LiteralString, f"{query} DO UPDATE SET {fields}")
+    query = f"{query} DO UPDATE SET {fields}"
+    if update_where:
+        query += f" WHERE {update_where}"
+    return cast(LiteralString, query)
