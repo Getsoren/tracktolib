@@ -600,11 +600,15 @@ async def s3_download_file(
         Params={"Bucket": bucket, "Key": key},
     )
     resp = await client.get(url, stream=True)
-    resp.raise_for_status()
-    if on_start:
-        on_start(resp)
-    async for chunk in await resp.iter_content(chunk_size):
-        yield chunk
+    # an unclosed stream keeps its pool slot; a full pool hangs every later request on the session
+    try:
+        resp.raise_for_status()
+        if on_start:
+            on_start(resp)
+        async for chunk in await resp.iter_content(chunk_size):
+            yield chunk
+    finally:
+        await resp.close()
 
 
 async def s3_create_multipart_upload(
