@@ -1,3 +1,9 @@
+## 1.1.1 (2026-09-28)
+
+### Fix
+
+- **s3**: release the connection of streamed downloads (#77)
+
 ## 1.1.0 (2026-09-23)
 
 ### Feat
