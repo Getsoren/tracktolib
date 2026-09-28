@@ -4,10 +4,21 @@ import datetime as dt
 import hashlib
 import http
 import xml.etree.ElementTree as ET
-from contextlib import asynccontextmanager, suppress
+from contextlib import aclosing, asynccontextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import AsyncIterator, Awaitable, Callable, Literal, NamedTuple, Required, Self, TypedDict, Unpack
+from typing import (
+    AsyncGenerator,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Literal,
+    NamedTuple,
+    Required,
+    Self,
+    TypedDict,
+    Unpack,
+)
 from urllib.parse import unquote
 from xml.sax.saxutils import escape as xml_escape
 
@@ -293,14 +304,16 @@ class S3Session:
         on_chunk: Callable[[bytes], None] | None = None,
         chunk_size: int = 1024 * 1024,
         on_start: OnDownloadStartFn | None = None,
-    ) -> AsyncIterator[bytes]:
+    ) -> AsyncGenerator[bytes, None]:
         """Download a file from S3 with streaming support."""
-        async for chunk in s3_download_file(
-            self._s3, self.http_client, bucket, key, chunk_size=chunk_size, on_start=on_start
-        ):
-            if on_chunk:
-                on_chunk(chunk)
-            yield chunk
+        # aclosing: closing this generator must close the inner one (and its connection) too
+        async with aclosing(
+            s3_download_file(self._s3, self.http_client, bucket, key, chunk_size=chunk_size, on_start=on_start)
+        ) as chunks:
+            async for chunk in chunks:
+                if on_chunk:
+                    on_chunk(chunk)
+                yield chunk
 
     def multipart_upload(self, bucket: str, key: str, *, expires_in: int = 3600, **kwargs: Unpack[S3ObjectParams]):
         """Create a multipart upload context manager."""
@@ -593,18 +606,22 @@ async def s3_download_file(
     *,
     chunk_size: int = 1024 * 1024,
     on_start: OnDownloadStartFn | None = None,
-) -> AsyncIterator[bytes]:
+) -> AsyncGenerator[bytes, None]:
     """Download an object from S3 with streaming support."""
     url = s3.generate_presigned_url(
         ClientMethod="get_object",
         Params={"Bucket": bucket, "Key": key},
     )
     resp = await client.get(url, stream=True)
-    resp.raise_for_status()
-    if on_start:
-        on_start(resp)
-    async for chunk in await resp.iter_content(chunk_size):
-        yield chunk
+    # an unclosed stream keeps its pool slot; a full pool hangs every later request on the session
+    try:
+        resp.raise_for_status()
+        if on_start:
+            on_start(resp)
+        async for chunk in await resp.iter_content(chunk_size):
+            yield chunk
+    finally:
+        await resp.close()
 
 
 async def s3_create_multipart_upload(

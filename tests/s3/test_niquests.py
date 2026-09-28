@@ -1,5 +1,7 @@
+import asyncio
 import os
 import time
+from contextlib import nullcontext
 from pathlib import Path
 
 import niquests
@@ -71,6 +73,25 @@ class TestS3Session:
 
         result = await s3_client.get_object(s3_bucket, key)
         assert result == test_data
+
+    @pytest.mark.parametrize(
+        ("key", "abandon"),
+        [
+            pytest.param("missing.txt", False, id="not-found"),
+            pytest.param("big.bin", True, id="abandoned-mid-stream"),
+        ],
+    )
+    async def test_download_file_releases_connection(self, s3_bucket, s3_client, key, abandon):
+        """Failed or abandoned downloads must not exhaust the session pool (10 slots)."""
+        await s3_client.put_object(s3_bucket, "big.bin", os.urandom(3 * 1024 * 1024), acl=None)
+        for _ in range(12):
+            chunks = s3_client.download_file(s3_bucket, key, chunk_size=1024)
+            with pytest.raises(niquests.HTTPError) if not abandon else nullcontext():
+                await anext(chunks)
+            await chunks.aclose()
+
+        async with asyncio.timeout(10):
+            assert await s3_client.get_object(s3_bucket, "big.bin") is not None
 
 
 @pytest.mark.usefixtures("setup_bucket")
