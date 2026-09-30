@@ -1,0 +1,113 @@
+:root {
+  --md-primary-fg-color:        #35B0B7;
+  --md-primary-fg-color--light: #50c6ce;
+  --md-primary-fg-color--dark:  #009CA6;
+  --md-accent-fg-color:         #35B0B7;
+}
+
+/* Header styling with Secondary color */
+.md-header {
+  background-color: #35B0B7;
+}
+
+/* Make the header smaller */
+.md-header {
+  height: 2.4rem;
+}
+
+.md-header__inner {
+  padding: 0 0.4rem;
+}
+
+.md-header__button.md-logo img {
+  height: 1.6rem;
+}
+
+/* Adjust main content top padding to match smaller header */
+.md-main__inner {
+  margin-top: 1rem;
+}
+
+/* Hide the search bar on very small headers or adjust it */
+.md-search__inner {
+  padding-top: 0.1rem;
+}
+
+/* Make navigation links more visible */
+.md-nav__link--active,
+.md-nav__link:hover {
+  border-left: 2px solid #35B0B7;
+  padding-left: 0.5rem;
+}
+
+.md-nav__link--active {
+  font-weight: 600;
+}
+
+/* Light mode: use dark text for active nav */
+[data-md-color-scheme="default"] .md-nav__link--active {
+  color: #009CA6 !important;
+}
+
+/* Dark mode: use light teal for active nav */
+[data-md-color-scheme="slate"] .md-nav__link--active {
+  color: #50c6ce !important;
+}
+
+/* Content links - more visible */
+.md-content a:not(.md-button):not(.md-source) {
+  color: #009CA6;
+  text-decoration: underline;
+  text-decoration-color: rgba(0, 156, 166, 0.4);
+  text-underline-offset: 2px;
+}
+
+.md-content a:not(.md-button):not(.md-source):hover {
+  color: #35B0B7;
+  text-decoration-color: #35B0B7;
+}
+
+/* Dark mode content links */
+[data-md-color-scheme="slate"] .md-content a:not(.md-button):not(.md-source) {
+  color: #50c6ce;
+  text-decoration-color: rgba(80, 198, 206, 0.4);
+}
+
+[data-md-color-scheme="slate"] .md-content a:not(.md-button):not(.md-source):hover {
+  color: #35B0B7;
+  text-decoration-color: #35B0B7;
+}
+
+/* Code links */
+.md-content a code {
+  color: inherit;
+}
+
+/* Highlighted links (secondary accent) */
+.highlight-link {
+  color: #35B0B7 !important;
+  font-weight: 500;
+}
+.highlight-link:hover {
+  color: #50c6ce !important;
+}
+
+/* Tabs styling */
+.md-typeset .tabbed-labels > label {
+  color: #009CA6;
+}
+
+.md-typeset .tabbed-labels > label:hover {
+  color: #35B0B7;
+}
+
+/* Admonition styling */
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-color: #FEA727;
+}
+
+.md-typeset .warning > .admonition-title,
+.md-typeset .warning > summary {
+  background-color: rgba(254, 167, 39, 0.1);
+}
