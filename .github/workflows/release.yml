@@ -14,10 +14,18 @@ jobs:
       id-token: write
       contents: write
     steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          app-id: ${{ vars.HABIOPS_APP_ID }}
+          private-key: ${{ secrets.HABIOPS_APP_KEY }}
+          owner: Getsoren
+          repositories: ${{ github.event.repository.name }}
+
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0
-          token: ${{ secrets.SOREN_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
