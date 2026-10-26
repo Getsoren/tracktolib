@@ -41,6 +41,7 @@ def get_conflict_query(
     where: str | None = None,
     merge_columns: Iterable[str] | None = None,
     update_where: str | None = None,
+    overwrite_columns: Iterable[str] | None = None,
 ) -> LiteralString:
     if on_conflict:
         return cast(LiteralString, on_conflict)
@@ -58,14 +59,21 @@ def get_conflict_query(
     _update_columns = update_columns or []
     _ignore_columns = ignore_columns or []
     _merge_columns = merge_columns or []
+    _overwrite_columns = set(overwrite_columns or [])
 
     if set(_merge_columns) & set(_update_columns):
         raise ValueError("Duplicate keys found between merge and update")
     if set(_merge_columns) & set(_ignore_columns):
         raise ValueError("Merge column cannot be ignored")
+    if _overwrite_columns & {*_update_columns, *_ignore_columns, *_merge_columns}:
+        raise ValueError("Overwrite column cannot be a conflict, ignored or merged column")
 
     _ignore_columns = [*_update_columns, *_ignore_columns, *_merge_columns]
-    fields = ", ".join(f"{x} = COALESCE(EXCLUDED.{x}, t.{x})" for x in columns if x not in _ignore_columns)
+    fields = ", ".join(
+        f"{x} = EXCLUDED.{x}" if x in _overwrite_columns else f"{x} = COALESCE(EXCLUDED.{x}, t.{x})"
+        for x in columns
+        if x not in _ignore_columns
+    )
     if merge_columns:
         fields = fields + ", " if fields else fields
         fields += ", ".join(f"{x} = COALESCE(t.{x}, JSONB_BUILD_OBJECT()) || EXCLUDED.{x}" for x in merge_columns)

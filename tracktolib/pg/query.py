@@ -36,6 +36,7 @@ def _get_on_conflict_query[K: str](
     where: K | None,
     merge_columns: Iterable[K] | None,
     update_where: str | None = None,
+    overwrite_columns: Iterable[K] | None = None,
 ) -> str:
     _on_conflict = get_conflict_query(
         columns=columns,
@@ -46,6 +47,7 @@ def _get_on_conflict_query[K: str](
         where=where,
         merge_columns=merge_columns,
         update_where=update_where,
+        overwrite_columns=overwrite_columns,
     )
     return f"{query} {_on_conflict}"
 
@@ -82,6 +84,8 @@ class PGConflictQuery[K: str]:
     merge_keys: Iterable[K] | None = None
     """Guard on DO UPDATE (e.g. `t.owner_id = EXCLUDED.owner_id`); conflicting rows failing it are skipped"""
     update_where: str | None = None
+    """Keys set to the inserted value on conflict, `None` included, instead of `COALESCE`d"""
+    overwrite_keys: Iterable[K] | None = None
 
     def __post_init__(self):
         _has_keys = 1 if (self.keys or self.ignore_keys) else 0
@@ -230,6 +234,7 @@ class PGInsertQuery(PGQuery):
                 self.on_conflict.where,
                 self.on_conflict.merge_keys,
                 self.on_conflict.update_where,
+                self.on_conflict.overwrite_keys,
             )
 
         # Returning
