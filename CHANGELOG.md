@@ -1,3 +1,9 @@
+## 1.3.0 (2026-10-26)
+
+### Feat
+
+- support Python 3.15 and require CA bundles patched after the emSign compromise (#81)
+
 ## 1.2.0 (2026-10-26)
 
 ### Feat
