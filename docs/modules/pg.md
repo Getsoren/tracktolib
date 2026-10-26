@@ -187,7 +187,8 @@ conflict = PGConflictQuery(
     keys=['email'],           # Conflict detection keys
     ignore_keys=['id'],       # Keys to ignore in update
     where='t.status != $1',   # Additional WHERE clause
-    merge_keys=['metadata']   # JSONB merge (a || b)
+    merge_keys=['metadata'],  # JSONB merge (a || b)
+    overwrite_keys=['deleted_at'],  # Set as inserted, None included (no COALESCE)
 )
 ```
 

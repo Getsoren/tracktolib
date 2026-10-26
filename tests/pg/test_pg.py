@@ -207,6 +207,19 @@ def compare_strings(str1: str, str2: str):
                 """,
             False,
         ),
+        (
+            {"foo": 1, "bar": 2, "id": 3},
+            {"keys": ["id"], "overwrite_keys": ["bar"]},
+            None,
+            """
+                INSERT INTO schema.table AS t (bar, foo, id)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (id)
+                    DO UPDATE SET bar = EXCLUDED.bar,
+                                  foo = COALESCE(EXCLUDED.foo, t.foo)
+                """,
+            False,
+        ),
     ],
 )
 def test_pg_insert_query(data, on_conflict, returning, expected, quote_columns):
@@ -290,6 +303,17 @@ def insert_data(engine):
             "SELECT bar, foo FROM foo.foo WHERE id = 1",
             [{"bar": "baz", "foo": 10}],
             id="on conflict update_where mismatch",
+        ),
+        pytest.param(
+            None,
+            {
+                "table": "foo.foo",
+                "item": {"id": 1, "foo": None, "bar": None},
+                "on_conflict": PGConflictQuery(keys=["id"], overwrite_keys=["bar"]),
+            },
+            "SELECT bar, foo FROM foo.foo WHERE id = 1",
+            [{"bar": None, "foo": 10}],
+            id="on conflict overwrite",
         ),
         pytest.param(
             lambda engine: (insert_one(engine, "foo.baz", {"id": 0, "baz": {"foo": 1}})),
