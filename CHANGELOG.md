@@ -1,3 +1,9 @@
+## 1.2.0 (2026-10-26)
+
+### Feat
+
+- **pg**: add overwrite_keys to PGConflictQuery to set conflict values without COALESCE (#80)
+
 ## 1.1.1 (2026-09-28)
 
 ### Fix
