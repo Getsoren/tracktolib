@@ -1,3 +1,9 @@
+## 1.4.0 (2026-10-30)
+
+### Feat
+
+- **gh**: GitHub App authentication (#82)
+
 ## 1.3.0 (2026-10-26)
 
 ### Feat
