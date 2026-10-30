@@ -48,7 +48,8 @@ pg = [
     "asyncpg>=0.27.0",
     "rich>=13.6.0",
 ]
-gh = ["niquests>=3.17.0", "typing_extensions>=4.12.0", "wassima>=2.1.5"]
+gh = ["niquests>=3.18.0", "typing_extensions>=4.12.0", "wassima>=2.1.5"]
+gh-app = ["niquests>=3.18.0", "typing_extensions>=4.12.0", "wassima>=2.1.5", "cryptography>=42.0.0"]
 cf = ["niquests>=3.17.0", "wassima>=2.1.5"]
 
 [dependency-groups]
