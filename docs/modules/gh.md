@@ -25,6 +25,7 @@ This module provides an async client for the [GitHub REST API](https://docs.gith
 - Pull requests (get, list, diff, reviews)
 - Collaborator permissions
 - Deployment status management (list, mark inactive)
+- GitHub App authentication (installation tokens, renewed automatically)
 
 ## Authentication
 
@@ -44,16 +45,35 @@ async with GitHubClient(token="ghp_xxx") as gh:
     # ... use client
 ```
 
-Short lived tokens (a GitHub App installation token expires after an hour) are best handled by creating a client per
-event, or by refreshing the header with a `pre_request` hook:
+### GitHub App
+
+`GitHubApp` authenticates as a GitHub App and hands out clients acting as one of its installations. It needs the
+`gh-app` extra (adds [cryptography](https://cryptography.io) to sign the app JWT):
+
+```bash
+uv add tracktolib[gh-app]
+```
 
 ```python
-def refresh_token(request, **kwargs):
-    request.headers["Authorization"] = f"Bearer {get_installation_token()}"
+from tracktolib.gh.app import GitHubApp
 
-async with GitHubClient(token="placeholder", hooks={"pre_request": [refresh_token]}) as gh:
-    # ... use client
+async with GitHubApp(app_id="123456", private_key=pem) as app:
+    installation = await app.get_installation("my-org")
+    async with app.client(installation["id"]) as gh:
+        repositories = await gh.list_installation_repositories()
 ```
+
+The installation token is minted on the first request and renewed 5 minutes before it expires, for as long as the
+client lives. Narrow it with `permissions={"issues": "write"}` or `repositories=["repo"]`.
+
+| Method | Description |
+|--------|-------------|
+| `jwt()` | RS256 JWT authenticating as the App (9 minutes) |
+| `list_installations()` | Accounts the App is installed on |
+| `get_installation(account)` | Installation on a user or org login, `None` when not installed |
+| `create_installation_token(installation_id, *, permissions, repositories)` | Mint a one-hour token yourself |
+| `installation_auth(installation_id, ...)` | niquests auth for `GitHubClient(auth=...)` or any session |
+| `client(installation_id, ...)` | `GitHubClient` acting as the installation |
 
 ## Issue Comments
 

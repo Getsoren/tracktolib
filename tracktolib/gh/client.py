@@ -12,6 +12,7 @@ except ImportError:
     raise ImportError('Please install niquests or tracktolib with "gh" to use this module')
 
 if TYPE_CHECKING:
+    from niquests.auth import AsyncAuthBase
     from urllib3.util.retry import Retry
 
     from tracktolib.gh.types import (
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
         PullRequestReview,
         PullRequestSimple,
         Reaction,
+        Repository,
     )
 
 
@@ -70,31 +72,52 @@ def _raise_for_status(response: niquests.Response) -> None:
     raise GitHubError(status, message or response.reason or "unknown error", response=response)
 
 
+GITHUB_HEADERS = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+
+
+async def _get_all(
+    session: niquests.AsyncSession, url: str, *, params: dict[str, str] | None = None, key: str | None = None
+) -> list[Any]:
+    """Collect list responses by following GitHub's next-page links, reading the list under `key` when wrapped."""
+    results: list[Any] = []
+    # GitHub defaults to 30 items per page; 100 is the maximum
+    params = {"per_page": "100", **(params or {})}
+    # Pages are fetched serially: GitHub asks for serial requests per token to avoid secondary rate limits
+    while True:
+        response = await session.get(url, params=params)
+        _raise_for_status(response)
+        payload = response.json()
+        results.extend(payload[key] if key is not None else payload)
+        if not (next_url := response.links.get("next", {}).get("url")):
+            return results
+        url = next_url
+        params = None
+
+
 @dataclass
 class GitHubClient:
     """
     Async GitHub API client for issues, labels, pull requests, reviews and deployments.
+
+    Authenticates with `token` (GITHUB_TOKEN by default), or with `auth` such as GitHubApp.installation_auth().
     """
 
     token: str | None = field(default_factory=lambda: os.environ.get("GITHUB_TOKEN"))
     base_url: str = "https://api.github.com"
     retries: int | Retry = 0
     hooks: Any = None
+    auth: AsyncAuthBase | None = None
     session: niquests.AsyncSession = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        if not self.token:
-            raise ValueError("GITHUB_TOKEN environment variable is required")
+        headers = dict(GITHUB_HEADERS)
+        if self.auth is None:
+            if not self.token:
+                raise ValueError("GITHUB_TOKEN environment variable is required")
+            headers["Authorization"] = f"Bearer {self.token}"
 
         self.session = niquests.AsyncSession(
-            base_url=self.base_url,
-            retries=self.retries,
-            hooks=self.hooks,
-            headers={
-                "Authorization": f"Bearer {self.token}",
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
+            base_url=self.base_url, retries=self.retries, hooks=self.hooks, auth=self.auth, headers=headers
         )
 
     async def __aenter__(self) -> GitHubClient:
@@ -108,19 +131,13 @@ class GitHubClient:
         await self.session.close()
 
     async def _get_all(self, url: str, *, params: dict[str, str] | None = None) -> list[Any]:
-        """Collect list responses by following GitHub's next-page links."""
-        results: list[Any] = []
-        # GitHub defaults to 30 items per page; 100 is the maximum
-        params = {"per_page": "100", **(params or {})}
-        # Pages are fetched serially: GitHub asks for serial requests per token to avoid secondary rate limits
-        while True:
-            response = await self.session.get(url, params=params)
-            _raise_for_status(response)
-            results.extend(response.json())
-            if not (next_url := response.links.get("next", {}).get("url")):
-                return results
-            url = next_url
-            params = None
+        return await _get_all(self.session, url, params=params)
+
+    # Installations
+
+    async def list_installation_repositories(self) -> list[Repository]:
+        """List the repositories a GitHub App installation can access, when authenticated as that installation."""
+        return await _get_all(self.session, "/installation/repositories", key="repositories")
 
     # Issue Comments
 

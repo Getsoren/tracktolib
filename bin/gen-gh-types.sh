@@ -39,6 +39,10 @@ SCHEMAS=(
   "pull-request-simple"
   "pull-request"
   "pull-request-review"
+
+  "installation"
+  "installation-token"
+  "repository"
 )
 
 echo "Downloading GitHub OpenAPI spec..."
@@ -65,6 +69,8 @@ jq '
 def obj: { type: "object" };
 def nullable_obj: { oneOf: [{ type: "object" }, { type: "null" }] };
 def obj_array: { type: "array", items: { type: "object" } };
+def str_map: { type: "object", additionalProperties: { type: "string" } };
+def flatten_refs: map_values(if has("$ref") or has("allOf") or has("anyOf") or has("oneOf") then nullable_obj else . end);
 .components.schemas["pull-request-simple"].properties |= (
   .labels = { type: "array", items: { "$ref": "#/components/schemas/label" } } |
   .head = {
@@ -111,6 +117,20 @@ def obj_array: { type: "array", items: { type: "object" } };
 .components.schemas["pull-request-review"].properties |= (
   ._links = obj |
   .author_association = { type: "string" }
+) |
+.components.schemas["installation"].properties |= (
+  .account = nullable_obj |
+  .suspended_by = nullable_obj |
+  .permissions = str_map
+) |
+.components.schemas["installation-token"].properties |= (
+  .permissions = str_map |
+  .repositories = obj_array
+) |
+.components.schemas["repository"].properties |= (
+  flatten_refs |
+  .permissions = { type: "object", additionalProperties: { type: "boolean" } } |
+  .code_search_index_status = obj
 )
 ' "$TEMP_SPEC" > "$TEMP_SPEC.tmp" && mv "$TEMP_SPEC.tmp" "$TEMP_SPEC"
 

@@ -11,12 +11,15 @@ from .types import (
     Deployment,
     DeploymentStatus,
     Head,
+    Installation,
+    InstallationToken,
     IssueComment,
     Label,
     PullRequest,
     PullRequestReview,
     PullRequestSimple,
     Reaction,
+    Repository,
 )
 
 __all__ = [
@@ -26,6 +29,8 @@ __all__ = [
     "GitHubClient",
     "GitHubError",
     "Head",
+    "Installation",
+    "InstallationToken",
     "IssueComment",
     "Label",
     "ProgressCallback",
@@ -34,6 +39,7 @@ __all__ = [
     "PullRequestSimple",
     "Reaction",
     "ReactionContent",
+    "Repository",
     "ReviewComment",
     "ReviewEvent",
 ]
